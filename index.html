@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>STAA MAIL</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+margin:0;
+padding:20px;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+}
+
+h1{
+margin-bottom:20px;
+}
+
+.email-box{
+background:#1e293b;
+padding:15px;
+border-radius:10px;
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+align-items:center;
+}
+
+button{
+padding:8px 12px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+background:#3b82f6;
+color:white;
+}
+
+table{
+width:100%;
+margin-top:20px;
+border-collapse:collapse;
+}
+
+th,td{
+padding:10px;
+border-bottom:1px solid #334155;
+}
+
+.viewer{
+margin-top:20px;
+background:#1e293b;
+padding:15px;
+border-radius:10px;
+display:none;
+}
+
+.otp{
+font-size:22px;
+color:#22c55e;
+font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📧 STAA MAIL</h1>
+
+<div class="email-box">
+
+<b id="email">Generate email dulu</b>
+
+<button onclick="copyEmail()">Copy</button>
+
+<select id="domain">
+<option value="1secmail.com">1secmail.com</option>
+<option value="1secmail.org">1secmail.org</option>
+<option value="1secmail.net">1secmail.net</option>
+<option value="esiix.com">esiix.com</option>
+<option value="wwjmp.com">wwjmp.com</option>
+</select>
+
+<button onclick="generateEmail()">Email Baru</button>
+
+<button onclick="loadInbox()">Refresh</button>
+
+</div>
+
+<table>
+
+<thead>
+<tr>
+<th>Dari</th>
+<th>Subject</th>
+<th>Tanggal</th>
+<th></th>
+</tr>
+</thead>
+
+<tbody id="inbox"></tbody>
+
+</table>
+
+<div id="viewer" class="viewer"></div>
+
+</div>
+
+<script>
+
+let login=""
+let domain=""
+let lastCount=0
+
+function random(){
+return Math.random().toString(36).substring(2,10)
+}
+
+function generateEmail(){
+
+login=random()
+
+domain=document.getElementById("domain").value
+
+let email=login+"@"+domain
+
+document.getElementById("email").innerText=email
+
+document.getElementById("inbox").innerHTML="Menunggu email..."
+
+}
+
+function copyEmail(){
+
+let email=document.getElementById("email").innerText
+
+navigator.clipboard.writeText(email)
+
+alert("Email disalin")
+
+}
+
+async function loadInbox(){
+
+if(login==""){
+alert("Generate email dulu")
+return
+}
+
+let url=`https://www.1secmail.com/api/v1/?action=getMessages&login=${login}&domain=${domain}`
+
+let res=await fetch(url)
+
+let data=await res.json()
+
+if(data.length>lastCount){
+
+alert("📩 Email baru masuk")
+
+}
+
+lastCount=data.length
+
+let html=""
+
+data.forEach(mail=>{
+
+html+=`
+<tr>
+<td>${mail.from}</td>
+<td>${mail.subject}</td>
+<td>${mail.date}</td>
+<td><button onclick="readMail(${mail.id})">Buka</button></td>
+</tr>
+`
+
+})
+
+if(html==""){
+html="<tr><td colspan='4'>Belum ada email</td></tr>"
+}
+
+document.getElementById("inbox").innerHTML=html
+
+}
+
+async function readMail(id){
+
+let url=`https://www.1secmail.com/api/v1/?action=readMessage&login=${login}&domain=${domain}&id=${id}`
+
+let res=await fetch(url)
+
+let data=await res.json()
+
+let body=data.body
+
+let otp=body.match(/\d{4,8}/)
+
+let html=`
+<h3>${data.subject}</h3>
+<p><b>Dari:</b> ${data.from}</p>
+<hr>
+<div>${body}</div>
+`
+
+if(otp){
+
+html+=`
+<div class="otp">OTP: ${otp[0]}</div>
+<button onclick="copyOTP('${otp[0]}')">Copy OTP</button>
+`
+
+}
+
+let viewer=document.getElementById("viewer")
+
+viewer.innerHTML=html
+
+viewer.style.display="block"
+
+}
+
+function copyOTP(code){
+
+navigator.clipboard.writeText(code)
+
+alert("OTP disalin")
+
+}
+
+setInterval(loadInbox,5000)
+
+</script>
+
+</body>
+</html>
